@@ -44,10 +44,11 @@ import sys
 import time
 import socket
 import string
-import urlparse
 import datetime
 import threading
 import re
+
+from six.moves.urllib import parse as urlparse
 
 # from yum.plugins import TYPE_CORE
 
@@ -122,7 +123,7 @@ def clean_hook(conduit):
         conduit.info(2, "Cleaning up list of fastest mirrors")
         try:
             os.unlink(hostfilepath)
-        except Exception, e:
+        except Exception as e:
             conduit.info(2, "Cleanup failed: %s" % e)
 
 # Get the hostname from a url, stripping away any usernames/passwords
@@ -215,21 +216,21 @@ def postreposetup_hook(conduit):
             repomirrors[str(repo)] = FastestMirror(repo.urls).get_mirrorlist()
         if include_only:
             def includeCheck(mirror):
-                if filter(lambda exp: re.search(exp, host(mirror)),
-                          include_only.replace(',', ' ').split()):
+                if list(filter(lambda exp: re.search(exp, host(mirror)),
+                          include_only.replace(',', ' ').split())):
                     conduit.info(2, "Including mirror: %s" % host(mirror))
                     return True
                 return False
-            repomirrors[str(repo)] = filter(includeCheck,repomirrors[str(repo)])
+            repomirrors[str(repo)] = list(filter(includeCheck,repomirrors[str(repo)]))
         else:
             if exclude:
                 def excludeCheck(mirror):
-                    if filter(lambda exp: re.search(exp, host(mirror)),
-                              exclude.replace(',', ' ').split()):
+                    if list(filter(lambda exp: re.search(exp, host(mirror)),
+                              exclude.replace(',', ' ').split())):
                         conduit.info(2, "Excluding mirror: %s" % host(mirror))
                         return False
                     return True
-                repomirrors[str(repo)] = filter(excludeCheck,repomirrors[str(repo)])
+                repomirrors[str(repo)] = list(filter(excludeCheck,repomirrors[str(repo)]))
         repo.urls = repomirrors[str(repo)]
         if len(repo.urls):
             lvl = 3
@@ -403,7 +404,7 @@ class FastestMirror:
             if mhost in timedhosts:
                 result = timedhosts[mhost]
                 if verbose:
-                    print "%s already timed: %s" % (mhost, result)
+                    print("%s already timed: %s" % (mhost, result))
                 self._add_result(mirror, mhost, result)
             elif mhost in ("127.0.0.1", "::1", "localhost", prefer):
                 self._add_result(mirror, mhost, 0)
@@ -438,7 +439,7 @@ class FastestMirror:
         """
         global timedhosts
         self._acquire_lock()
-        if verbose: print " * %s : %f secs" % (host, time)
+        if verbose: print(" * %s : %f secs" % (host, time))
         self.results[mirror] = time
         timedhosts[host] = time
         self._release_lock()
@@ -494,7 +495,7 @@ class PollThread(threading.Thread):
             if self.host in timedhosts:
                 result = timedhosts[self.host]
                 if verbose:
-                    print "%s already timed: %s" % (self.host, result)
+                    print("%s already timed: %s" % (self.host, result))
             else:
                 if self.host in ("127.0.0.1", "::1", "localhost", prefer):
                     result = 0
@@ -511,7 +512,7 @@ class PollThread(threading.Thread):
             self.parent._add_result(self.mirror, self.host, result)
         except:
             if verbose:
-                print " * %s : dead" % self.host
+                print(" * %s : dead" % self.host)
             self.parent._add_result(self.mirror, self.host, 99999999999)
 
 def main():
@@ -528,11 +529,11 @@ def main():
     verbose = True
 
     if len(sys.argv) == 1:
-        print "Usage: %s <mirror1> [mirror2] ... [mirrorN]" % sys.argv[0]
+        print("Usage: %s <mirror1> [mirror2] ... [mirrorN]" % sys.argv[0])
         sys.exit(-1)
 
     mirrorlist = sys.argv[1:]
-    print "Result: " + str(FastestMirror(mirrorlist).get_mirrorlist())
+    print("Result: " + str(FastestMirror(mirrorlist).get_mirrorlist()))
 
 if __name__ == '__main__':
     main()
